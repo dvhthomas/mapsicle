@@ -249,4 +249,38 @@
     font-size: 0.875rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
+
+  /* Mobile/tablet: Reduce padding and adjust image height to prevent cutoff */
+  @media (max-width: 1024px) {
+    .image-viewer-backdrop {
+      padding: 0.5rem;
+    }
+
+    .image-viewer-content {
+      max-height: calc(100vh - 10rem);
+      border-radius: var(--radius-sm); /* Less rounded on mobile */
+    }
+
+    .viewer-controls {
+      margin-top: 1rem;
+    }
+
+    .viewer-close {
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 1.5rem;
+      border-radius: var(--radius-sm); /* Less rounded on mobile */
+    }
+
+    .viewer-nav {
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 1.5rem;
+      border-radius: var(--radius-sm); /* Less rounded on mobile */
+    }
+
+    .viewer-counter {
+      border-radius: var(--radius-md); /* Less rounded on mobile */
+    }
+  }
 </style>

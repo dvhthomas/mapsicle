@@ -28,12 +28,22 @@
   import { createEventDispatcher } from 'svelte';
   import Mark from 'mark.js';
   import LocationCard from './LocationCard.svelte';
+  import Collapsible from './Collapsible.svelte';
+  import { locationListTitle, discoverMode, selectedTags } from './stores/appState';
 
   export let locations = [];
   export let selectedLocation = null;
   export let searchQuery = '';
 
   const dispatch = createEventDispatcher();
+  let isExpanded = true; // Expanded by default
+
+  // Reactive tooltip based on current state
+  $: tooltipText = $discoverMode
+    ? 'Most recently updated locations'
+    : searchQuery.trim() || $selectedTags.size > 0
+    ? 'Matching locations for your search or filter'
+    : 'Locations visible in the current map view';
 
   /**
    * Forward select event from child LocationCard components
@@ -83,18 +93,49 @@
   });
 </script>
 
-<div class="locations-list">
-  {#if locations.length === 0}
-    <p>No locations match the selected filters.</p>
-  {:else}
-    {#each locations as location (location.slug)}
-      <LocationCard
-        {location}
-        selected={selectedLocation === location}
-        on:select={handleSelect}
-        on:hover={handleHover}
-        on:tagclick={handleTagClick}
-      />
-    {/each}
-  {/if}
-</div>
+<Collapsible
+  title={$locationListTitle}
+  bind:isExpanded
+  fill={true}
+  tooltip={tooltipText}
+>
+  <div class="locations-list">
+    {#if locations.length === 0}
+      <p class="no-results">No locations match the selected filters.</p>
+    {:else}
+      {#each locations as location (location.slug)}
+        <LocationCard
+          {location}
+          selected={selectedLocation === location}
+          on:select={handleSelect}
+          on:hover={handleHover}
+          on:tagclick={handleTagClick}
+        />
+      {/each}
+    {/if}
+  </div>
+</Collapsible>
+
+<style>
+  .locations-list {
+    padding: var(--spacing-sm) 0;
+    background: var(--color-surface);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .no-results {
+    padding: var(--spacing-md);
+    color: var(--color-text-secondary);
+    text-align: center;
+    font-size: 0.875rem;
+  }
+
+  /* Responsive: More compact list on mobile/tablet */
+  @media (max-width: 1024px) {
+    .locations-list {
+      padding: var(--spacing-xs);
+    }
+  }
+</style>

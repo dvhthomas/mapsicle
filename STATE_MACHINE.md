@@ -4,6 +4,18 @@
 
 The application uses a centralized state management system with clear state machine semantics. All state lives in `src/lib/stores/appState.js` using Svelte stores.
 
+## Core State Variables
+
+The application manages the following state variables in `src/lib/stores/appState.js`:
+
+- `allLocations` - All location data loaded from content
+- `searchQuery` - Current search text (empty when not searching)
+- `selectedTags` - Set of active tag filters (empty when not filtering)
+- `selectedLocation` - Currently selected location (null when not viewing)
+- `mapBounds` - Current map viewport bounds (for filtering visible locations)
+- `discoverMode` - Boolean flag for discover state
+- **`isPreviewingLocation`** - Temporary flag during hover preview (prevents list reordering)
+
 ## States
 
 ### 1. **Home** (Default)
@@ -152,8 +164,17 @@ All transitions go through `actions` in `appState.js`:
 **Preview (Temporary) ← Any State**
 - Pans map to location (no zoom change)
 - Opens popup
-- Does NOT change state
+- Sets `isPreviewingLocation = true` (prevents location list reordering)
+- Auto-clears after 150ms
+- Does NOT change filters, search, or selection
 - **Triggered by**: Hovering gallery images or location cards
+- **Special behavior**: Blocks `boundschange` events during preview to prevent cascading hover events
+
+#### `actions.clearPreview()`
+**Any State ← Preview**
+- Manually clears `isPreviewingLocation` flag
+- Allows normal bounds updates to resume
+- **Triggered by**: User interaction with map (drag, zoom)
 
 ## Derived State
 
@@ -239,6 +260,35 @@ function handleTagClick(event) {
 }
 ```
 
+## Preview State Mechanics
+
+The `isPreviewingLocation` flag solves a critical UX issue with hover interactions:
+
+### The Problem
+1. User hovers over location card → Map pans to that location
+2. Map pan triggers `moveend` event → Emits new bounds
+3. Parent updates location list based on new bounds → List reorders
+4. Cards shift under mouse → Different card now hovered
+5. Goto step 1 → **Cascading hover loop!**
+
+### The Solution
+- When `actions.hoverLocation()` is called:
+  - Sets `isPreviewingLocation = true`
+  - Pans map (triggers `moveend`)
+  - Map component checks flag and **skips** bounds update
+  - Location list stays stable
+  - Flag auto-clears after 150ms
+
+- When user **explicitly** interacts with map (drag/zoom):
+  - `actions.updateMapBounds()` is called
+  - Clears `isPreviewingLocation` immediately
+  - Location list updates normally
+
+### Result
+- Hover previews work smoothly without list flickering ✅
+- Explicit map interactions update list immediately ✅
+- Temporary state with automatic cleanup ✅
+
 ## State Machine Invariants
 
 Rules that are always maintained:
@@ -248,6 +298,7 @@ Rules that are always maintained:
 3. **Filter Logic**: Tag filters use AND logic (must have ALL selected tags)
 4. **Derived Always Current**: Derived state auto-updates when base state changes
 5. **Reset is Total**: `reset()` returns to exact home state
+6. **Preview is Temporary**: `isPreviewingLocation` auto-clears and never persists
 
 ## Future Enhancements
 

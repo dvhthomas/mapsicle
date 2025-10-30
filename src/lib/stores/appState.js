@@ -1,29 +1,75 @@
+/**
+ * Application State Machine
+ *
+ * STATE MODES:
+ * 1. HOME - Default browsing (no filters, shows locations in current map viewport)
+ * 2. SEARCH - Text search active (shows all matching results regardless of viewport)
+ * 3. FILTER - Tag filtering active (shows all matching results regardless of viewport)
+ * 4. DISCOVER - Browse recently updated (shows all locations sorted by update date)
+ * 5. VIEWING - Location detail panel open (preserves search/filter context)
+ *
+ * STATE TRANSITIONS:
+ * - HOME → SEARCH: User types in search bar
+ * - HOME → FILTER: User selects tag(s)
+ * - HOME → DISCOVER: User clicks Discover button
+ * - SEARCH/FILTER → VIEWING: User selects location (search/filter preserved!)
+ * - ANY → HOME: User clicks reset (X button or View All)
+ *
+ * URL STATE SYNCHRONIZATION:
+ * - /?s=query           - Search mode
+ * - /?loc=slug          - Viewing mode (no search)
+ * - /?s=query&loc=slug  - Viewing mode (search preserved)
+ * - /?discover          - Discover mode
+ * - /                   - Home mode
+ *
+ * FILTER PRESERVATION RULES:
+ * - selectLocation() → PRESERVES search/tags (prevents list reordering under mouse)
+ * - selectLocation() from Discover list → Calls clearFilters() first (changes context)
+ * - search() → CLEARS tags (text search replaces tag filter)
+ * - filterByTags() → CLEARS search (tag filter replaces text search)
+ * - clearFilters() → CLEARS search/tags only (preserves location/discover mode)
+ * - reset() → CLEARS everything (explicit user action)
+ * - discover() → CLEARS everything (explicit mode switch)
+ */
+
 import { writable, derived, get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import Fuse from 'fuse.js';
 
-// Core state
+// ============================================
+// CORE STATE STORES
+// ============================================
+
 export const allLocations = writable([]);
 export const searchQuery = writable('');
 export const selectedTags = writable(new Set());
 export const selectedLocation = writable(null);
 export const mapBounds = writable(null);
 export const discoverMode = writable(false);
+export const isPreviewingLocation = writable(false); // Temporary state during hover
 
-// Derived state - filtered locations based on search and tags
+// ============================================
+// DERIVED STATE (AUTO-COMPUTED)
+// ============================================
+
+/**
+ * filteredLocations - Locations matching search and/or tag filters
+ * Applied BEFORE viewport filtering
+ * Uses Fuse.js for fuzzy text search
+ */
 export const filteredLocations = derived(
   [allLocations, searchQuery, selectedTags],
   ([$allLocations, $searchQuery, $selectedTags]) => {
     let results = $allLocations;
 
-    // Apply text search if active
+    // Apply text search if active (fuzzy search across multiple fields)
     if ($searchQuery.trim()) {
       const fuse = new Fuse($allLocations, {
         keys: [
-          { name: 'name', weight: 2 },
+          { name: 'name', weight: 2 },        // Highest priority
           { name: 'place', weight: 1.5 },
           { name: 'tags', weight: 1 },
-          { name: 'description', weight: 0.5 }
+          { name: 'description', weight: 0.5 } // Lowest priority
         ],
         threshold: 0.3
       });
@@ -41,21 +87,32 @@ export const filteredLocations = derived(
   }
 );
 
-// Derived state - visible locations (filtered by map bounds or all if searching/filtering)
+/**
+ * visibleLocations - Final location list shown in sidebar
+ *
+ * FILTERING LOGIC:
+ * 1. If SEARCH or FILTER active → Show ALL matching results (ignore map bounds)
+ * 2. If DISCOVER active → Show ALL locations sorted by most recent
+ * 3. Otherwise (HOME mode) → Show only locations in current map viewport
+ *
+ * This ensures that when user searches for "oxford", they see ALL Oxford results,
+ * not just those currently visible on the map. Critical for preventing list
+ * reordering when selecting a location that causes map to zoom/pan.
+ */
 export const visibleLocations = derived(
   [filteredLocations, searchQuery, selectedTags, mapBounds, discoverMode],
   ([$filteredLocations, $searchQuery, $selectedTags, $mapBounds, $discoverMode]) => {
-    // If searching or filtering, show all matching results
+    // SEARCH/FILTER MODE: Show all matching results (ignore viewport)
     if ($searchQuery.trim() || $selectedTags.size > 0) {
       return $filteredLocations;
     }
 
-    // If in discover mode, show all locations sorted by most recent
+    // DISCOVER MODE: Show all locations sorted by most recent update
     if ($discoverMode) {
       return [...$filteredLocations].sort((a, b) => (b.updated || 0) - (a.updated || 0));
     }
 
-    // Otherwise filter by map bounds
+    // HOME MODE: Filter by map viewport bounds
     if (!$mapBounds) return $filteredLocations;
 
     const filtered = $filteredLocations.filter(location => {
@@ -74,7 +131,10 @@ export const visibleLocations = derived(
   }
 );
 
-// Derived state - gallery locations (most recent 6)
+/**
+ * galleryLocations - Recent updates for Discover modal
+ * Always shows 6 most recently updated locations with hero images
+ */
 export const galleryLocations = derived(
   [allLocations],
   ([$allLocations]) => {
@@ -85,7 +145,10 @@ export const galleryLocations = derived(
   }
 );
 
-// Derived state - all unique tags
+/**
+ * allTags - Unique tags from all locations
+ * Used to populate tag filter UI
+ */
 export const allTags = derived(
   [allLocations],
   ([$allLocations]) => {
@@ -99,11 +162,43 @@ export const allTags = derived(
   }
 );
 
-// State machine actions
+/**
+ * locationListTitle - Sidebar section header text
+ * Changes based on current mode:
+ * - "DISCOVER" → Discover mode active
+ * - "RESULTS" → Search or filter active
+ * - "CURRENT MAP" → Default browsing (viewport-based)
+ */
+export const locationListTitle = derived(
+  [discoverMode, searchQuery, selectedTags],
+  ([$discoverMode, $searchQuery, $selectedTags]) => {
+    if ($discoverMode) {
+      return 'DISCOVER';
+    }
+    if ($searchQuery.trim() || $selectedTags.size > 0) {
+      return 'RESULTS';
+    }
+    return 'CURRENT MAP';
+  }
+);
+
+// ============================================
+// STATE MACHINE ACTIONS
+// ============================================
 export const actions = {
   /**
-   * RESET - Return to home state
-   * Clears all filters, selections, and URL params
+   * ACTION: reset()
+   * TRANSITION: ANY → HOME
+   * TRIGGER: User clicks X button or "View All" button
+   *
+   * STATE CHANGES:
+   * - Clears search query
+   * - Clears tag filters
+   * - Clears selected location
+   * - Exits discover mode
+   *
+   * URL: / (all params cleared)
+   * SIDE EFFECTS: Triggers map to zoom to show all locations
    */
   reset() {
     searchQuery.set('');
@@ -111,58 +206,149 @@ export const actions = {
     selectedLocation.set(null);
     discoverMode.set(false);
 
-    // Clear URL
+    // Clear URL completely
     const url = new URL(window.location.href);
-    url.search = '';
+    url.searchParams.delete('s');
+    url.searchParams.delete('loc');
+    url.searchParams.delete('discover');
     window.history.pushState({}, '', url);
 
-    // Trigger map reset
+    // Trigger map to fit all locations
     window.dispatchEvent(new CustomEvent('resetview'));
   },
 
   /**
-   * SEARCH - Enter search state
-   * @param {string} query - Search text
+   * ACTION: clearFilters()
+   * TRANSITION: Clears search/tag filters without changing other state
+   * TRIGGER: Used when switching contexts (e.g., from search to discover browsing)
+   *
+   * STATE CHANGES:
+   * - Clears search query
+   * - Clears tag filters
+   * - PRESERVES selected location
+   * - PRESERVES discover mode
+   *
+   * URL: Updates to remove 's' parameter
+   *
+   * USE CASE: When user selects location from Discover modal, we want to clear
+   * the search context (since they're no longer searching) but keep the location
+   * selection and let selectLocation() handle the URL update.
+   */
+  clearFilters() {
+    searchQuery.set('');
+    selectedTags.set(new Set());
+
+    // Update URL to remove search parameter
+    const url = new URL(window.location.href);
+    url.searchParams.delete('s');
+    goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+  },
+
+  /**
+   * ACTION: search(query)
+   * TRANSITION: ANY → SEARCH (or HOME if query is empty)
+   * TRIGGER: User types in search bar
+   *
+   * STATE CHANGES:
+   * - Sets search query
+   * - CLEARS tag filters (search replaces tag filter)
+   * - CLEARS selected location
+   * - Exits discover mode
+   *
+   * URL: /?s=query (or / if query empty)
+   * LIST BEHAVIOR: Shows ALL matching results regardless of map viewport
    */
   search(query) {
     searchQuery.set(query);
-    selectedTags.set(new Set()); // Clear tag filters when searching
+    selectedTags.set(new Set()); // Clear tag filters (search replaces them)
     discoverMode.set(false);
 
     // Update URL
     const url = new URL(window.location.href);
+    url.searchParams.delete('discover');
+    url.searchParams.delete('loc');
     if (query) {
-      url.searchParams.set('q', query);
+      url.searchParams.set('s', query);
     } else {
-      url.searchParams.delete('q');
+      url.searchParams.delete('s');
     }
     goto(url, { replaceState: true, noScroll: true, keepFocus: true });
   },
 
   /**
-   * FILTER BY TAGS - Enter filtering state
-   * @param {Set<string>} tags - Selected tags
+   * ACTION: filterByTags(tags)
+   * TRANSITION: ANY → FILTER (or HOME if no tags)
+   * TRIGGER: User selects/deselects tags
+   *
+   * STATE CHANGES:
+   * - Sets selected tags
+   * - CLEARS search query (tag filter replaces search)
+   * - CLEARS selected location
+   * - Exits discover mode
+   *
+   * URL: / (tags not stored in URL currently)
+   * LIST BEHAVIOR: Shows ALL matching results regardless of map viewport
    */
   filterByTags(tags) {
     selectedTags.set(tags);
     discoverMode.set(false);
     if (tags.size > 0) {
-      searchQuery.set(''); // Clear search when filtering by tags
+      searchQuery.set(''); // Clear search (tag filter replaces it)
     }
+
+    // Update URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete('discover');
+    url.searchParams.delete('s');
+    url.searchParams.delete('loc');
+    goto(url, { replaceState: true, noScroll: true, keepFocus: true });
   },
 
   /**
-   * SELECT LOCATION - Enter viewing state
-   * @param {Object} location - Location to view
+   * ACTION: selectLocation(location)
+   * TRANSITION: SEARCH/FILTER/HOME → VIEWING
+   * TRIGGER: User clicks location card or map marker
+   *
+   * STATE CHANGES:
+   * - Sets selected location (opens detail panel)
+   * - PRESERVES search query (prevents list reordering!)
+   * - PRESERVES tag filters (prevents list reordering!)
+   * - Exits discover mode
+   *
+   * URL: /?loc=slug (or /?s=query&loc=slug if searching)
+   * LIST BEHAVIOR: Maintains current list - prevents card shifting under mouse
+   *
+   * CRITICAL: We preserve search/filter context here to prevent the list
+   * from reordering when map zooms to location. Without this, clicking a
+   * card would cause bounds change → different cards under mouse cursor.
    */
   selectLocation(location) {
     selectedLocation.set(location);
     discoverMode.set(false);
+    // IMPORTANT: Keep searchQuery and selectedTags unchanged!
+
+    // Update URL with location slug for deep linking
+    const url = new URL(window.location.href);
+    url.searchParams.delete('discover');
+    if (location?.slug) {
+      url.searchParams.set('loc', location.slug);
+    }
+    goto(url, { replaceState: true, noScroll: true, keepFocus: true });
   },
 
   /**
-   * DISCOVER - Enter discover state
-   * Shows most recently updated location
+   * ACTION: discover()
+   * TRANSITION: ANY → DISCOVER
+   * TRIGGER: User clicks "Discover" button
+   *
+   * STATE CHANGES:
+   * - Selects most recently updated location
+   * - CLEARS search query
+   * - CLEARS tag filters
+   * - Enters discover mode
+   *
+   * URL: /?discover
+   * LIST BEHAVIOR: Shows ALL locations sorted by update date
    */
   discover() {
     const locations = get(allLocations);
@@ -184,29 +370,84 @@ export const actions = {
   },
 
   /**
-   * HOVER - Temporary preview state
-   * @param {Object} location - Location to preview
+   * ACTION: hoverLocation(location)
+   * TRANSITION: Temporary preview (no state change)
+   * TRIGGER: Mouse enters location card
+   *
+   * STATE CHANGES: None (temporary visual preview only)
+   * SIDE EFFECTS:
+   * - Pans map to location without changing zoom
+   * - Opens location popup on map
+   * - Sets isPreviewingLocation flag (prevents bounds update from filtering list)
+   *
+   * This is NOT a state transition - it's a temporary preview that
+   * doesn't affect filters or URL. Auto-clears after 150ms.
+   *
+   * NOTE: Disabled when a location is selected (handled in +page.svelte).
+   * This prevents the map from panning away from the selected location when
+   * user scrolls through cards to reach map controls.
    */
   hoverLocation(location) {
+    isPreviewingLocation.set(true);
     window.dispatchEvent(new CustomEvent('locationhover', { detail: location }));
+
+    // Auto-clear preview flag after brief delay
+    setTimeout(() => {
+      isPreviewingLocation.set(false);
+    }, 150);
   },
 
   /**
-   * UPDATE MAP BOUNDS
-   * @param {Object} bounds - New map bounds
+   * ACTION: clearPreview()
+   * Internal - exits hover preview state
+   */
+  clearPreview() {
+    isPreviewingLocation.set(false);
+  },
+
+  /**
+   * ACTION: updateMapBounds(bounds)
+   * TRANSITION: None (updates viewport-based filtering)
+   * TRIGGER: User pans/zooms map
+   *
+   * STATE CHANGES:
+   * - Updates map bounds (used for HOME mode filtering)
+   * - Clears preview state
+   *
+   * LIST BEHAVIOR: Only affects list when in HOME mode (no search/filter active)
    */
   updateMapBounds(bounds) {
+    isPreviewingLocation.set(false);
     mapBounds.set(bounds);
   },
 
   /**
-   * INITIALIZE from URL
-   * @param {URLSearchParams} params - URL search params
+   * ACTION: initializeFromURL(params)
+   * TRANSITION: Restores state from URL on page load
+   * TRIGGER: App startup
+   *
+   * Handles deep linking by parsing URL parameters:
+   * - /?s=query → Restores search
+   * - /?loc=slug → Selects and zooms to location
+   * - /?s=query&loc=slug → Restores search AND selects location
+   * - /?discover → Enters discover mode
    */
   initializeFromURL(params) {
-    const query = params.get('q');
+    const query = params.get('s');
     if (query) {
       searchQuery.set(query);
+    }
+
+    // Check for location deep link
+    const locationSlug = params.get('loc');
+    if (locationSlug) {
+      const locations = get(allLocations);
+      const location = locations.find(loc => loc.slug === locationSlug);
+      if (location) {
+        // Delay to ensure map is ready
+        setTimeout(() => this.selectLocation(location), 500);
+        return;
+      }
     }
 
     if (params.has('discover')) {
