@@ -1,0 +1,100 @@
+<script>
+  /**
+   * LocationList Component
+   *
+   * Scrollable list of location cards with search term highlighting.
+   * Acts as the primary navigation interface in the sidebar.
+   *
+   * Features:
+   * - Displays filtered/searched locations as cards
+   * - Highlights search terms in real-time using Mark.js
+   * - Click to select location (opens detail panel)
+   * - Hover to preview location on map
+   * - Click tags to search for that tag
+   * - Visual indicator for selected location
+   * - Shows "no results" message when empty
+   *
+   * @prop {Array} locations - Filtered locations to display
+   * @prop {Object|null} selectedLocation - Currently selected location
+   * @prop {string} searchQuery - Current search text (for highlighting)
+   *
+   * @fires select - When a location card is clicked
+   * @fires hover - When mouse enters a location card
+   * @fires tagclick - When a tag in a card is clicked
+   */
+
+  import { afterUpdate } from 'svelte';
+  import { browser } from '$app/environment';
+  import { createEventDispatcher } from 'svelte';
+  import Mark from 'mark.js';
+  import LocationCard from './LocationCard.svelte';
+
+  export let locations = [];
+  export let selectedLocation = null;
+  export let searchQuery = '';
+
+  const dispatch = createEventDispatcher();
+
+  /**
+   * Forward select event from child LocationCard components
+   */
+  function handleSelect(event) {
+    dispatch('select', event.detail);
+  }
+
+  /**
+   * Forward hover event from child LocationCard components
+   */
+  function handleHover(event) {
+    dispatch('hover', event.detail);
+  }
+
+  /**
+   * Forward tag click event from child LocationCard components
+   */
+  function handleTagClick(event) {
+    dispatch('tagclick', event.detail);
+  }
+
+  /**
+   * Highlight search terms in location cards after each update
+   * Uses Mark.js to visually emphasize matching text
+   * Runs only in browser context after DOM updates
+   */
+  afterUpdate(() => {
+    if (browser) {
+      const listContainer = document.querySelector('.locations-list');
+      if (listContainer) {
+        const highlighter = new Mark(listContainer);
+
+        // Clear previous highlights
+        highlighter.unmark();
+
+        // Apply new highlights if there's a search query
+        if (searchQuery.trim()) {
+          highlighter.mark(searchQuery, {
+            separateWordSearch: false,  // Match entire phrase
+            accuracy: 'partially',      // Allow partial word matches
+            className: 'search-highlight'
+          });
+        }
+      }
+    }
+  });
+</script>
+
+<div class="locations-list">
+  {#if locations.length === 0}
+    <p>No locations match the selected filters.</p>
+  {:else}
+    {#each locations as location (location.slug)}
+      <LocationCard
+        {location}
+        selected={selectedLocation === location}
+        on:select={handleSelect}
+        on:hover={handleHover}
+        on:tagclick={handleTagClick}
+      />
+    {/each}
+  {/if}
+</div>

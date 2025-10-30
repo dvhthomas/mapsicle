@@ -8,9 +8,15 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+build
+.svelte-kit
 dist
 dist-ssr
 *.local
+
+# Environment variables
+.env
+.env.local
 
 # Editor directories and files
 .vscode/*

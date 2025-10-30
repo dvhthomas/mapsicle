@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 import fs from 'fs/promises';
-import yaml from 'js-yaml';
+import matter from 'gray-matter';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const YAML_PATH = path.join(__dirname, '../public/locations.yaml');
+const CONTENT_DIR = path.join(__dirname, '../static/locations');
 const DELAY_MS = 1000; // Rate limit: 1 request per second for Nominatim
 
 // Geocode a place name using Nominatim (OpenStreetMap)
@@ -53,78 +53,129 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Recursively find all location folders (those containing index.md)
+async function findLocationFolders(dir, relativePath = '') {
+  const results = [];
+
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      // Skip hidden files/folders
+      if (entry.name.startsWith('.')) {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        const fullPath = path.join(dir, entry.name);
+        const indexPath = path.join(fullPath, 'index.md');
+        const newRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+
+        try {
+          await fs.access(indexPath);
+          // This directory contains an index.md - it's a location
+          results.push({ folder: newRelativePath, indexPath });
+        } catch {
+          // No index.md here, recurse into subdirectory
+          const nested = await findLocationFolders(fullPath, newRelativePath);
+          results.push(...nested);
+        }
+      }
+    }
+  } catch (err) {
+    // Directory doesn't exist or can't be read, skip it
+  }
+
+  return results;
+}
+
 async function main() {
   console.log('Travel Map Geocoder');
   console.log('===================\n');
 
+  // Get optional location slug from command line (can include slashes for nested)
+  const targetSlug = process.argv[2];
+
   try {
-    // Read YAML file
-    console.log(`Reading ${YAML_PATH}...`);
-    const fileContent = await fs.readFile(YAML_PATH, 'utf8');
-    const data = yaml.load(fileContent);
+    let locationFiles = [];
 
-    if (!data || !data.locations) {
-      throw new Error('Invalid YAML structure: missing locations array');
+    if (targetSlug) {
+      // Geocode single location (supports nested paths like "japan/tokyo-tower")
+      const indexPath = path.join(CONTENT_DIR, targetSlug, 'index.md');
+      try {
+        await fs.access(indexPath);
+        locationFiles.push({ folder: targetSlug, indexPath });
+        console.log(`Geocoding single location: ${targetSlug}\n`);
+      } catch {
+        console.error(`Error: Location "${targetSlug}" not found at ${indexPath}`);
+        process.exit(1);
+      }
+    } else {
+      // Geocode all locations (recursively finds all index.md files)
+      console.log(`Reading ${CONTENT_DIR}...`);
+      locationFiles = await findLocationFolders(CONTENT_DIR);
+
+      console.log(`Found ${locationFiles.length} locations\n`);
     }
-
-    console.log(`Found ${data.locations.length} locations\n`);
 
     let geocodedCount = 0;
     let skippedCount = 0;
     let failedCount = 0;
 
     // Process each location
-    for (let i = 0; i < data.locations.length; i++) {
-      const location = data.locations[i];
-      console.log(`[${i + 1}/${data.locations.length}] ${location.name}`);
+    for (let i = 0; i < locationFiles.length; i++) {
+      const { folder, indexPath } = locationFiles[i];
+
+      // Read and parse the markdown file
+      const fileContent = await fs.readFile(indexPath, 'utf-8');
+      const { data: frontmatter, content } = matter(fileContent);
+
+      console.log(`[${i + 1}/${locationFiles.length}] ${frontmatter.name || folder}`);
 
       // Skip if coords already exist
-      if (location.coords && location.coords.lat && location.coords.lon) {
+      if (frontmatter.coords && frontmatter.coords.lat && frontmatter.coords.lon) {
         console.log(`  → Already has coordinates, skipping\n`);
         skippedCount++;
         continue;
       }
 
       // Check if place field exists
-      if (!location.place) {
+      if (!frontmatter.place) {
         console.log(`  ✗ No 'place' field specified\n`);
         failedCount++;
         continue;
       }
 
       // Geocode the place
-      const coords = await geocodePlace(location.place);
+      const coords = await geocodePlace(frontmatter.place);
 
       if (coords) {
-        location.coords = coords;
+        // Update frontmatter with coordinates
+        frontmatter.coords = coords;
+
+        // Write back to file
+        const updatedFile = matter.stringify(content, frontmatter);
+        await fs.writeFile(indexPath, updatedFile, 'utf-8');
+
         geocodedCount++;
       } else {
         failedCount++;
       }
 
       // Rate limit delay
-      if (i < data.locations.length - 1) {
+      if (i < locationFiles.length - 1) {
         await delay(DELAY_MS);
       }
       console.log();
     }
 
-    // Write back to YAML
-    console.log('Writing updated YAML file...');
-    const yamlOutput = yaml.dump(data, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true
-    });
-    await fs.writeFile(YAML_PATH, yamlOutput, 'utf8');
-
     // Summary
-    console.log('\n===================');
+    console.log('===================');
     console.log('Summary:');
     console.log(`  ✓ Geocoded: ${geocodedCount}`);
     console.log(`  → Skipped: ${skippedCount}`);
     console.log(`  ✗ Failed: ${failedCount}`);
-    console.log(`  Total: ${data.locations.length}`);
+    console.log(`  Total: ${locationFiles.length}`);
 
     if (failedCount > 0) {
       console.log('\n⚠️  Some locations could not be geocoded.');

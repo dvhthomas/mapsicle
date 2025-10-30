@@ -4,19 +4,30 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite dev",
+    "prebuild": "npm run check",
     "build": "vite build",
     "preview": "vite preview",
-    "geocode": "node scripts/geocode.js"
+    "check": "svelte-check --tsconfig ./jsconfig.json --fail-on-warnings",
+    "check:watch": "svelte-check --tsconfig ./jsconfig.json --watch",
+    "geocode": "node scripts/geocode.js",
+    "new-location": "node scripts/new-location.js"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^4.0.0",
-    "svelte": "^5.0.0",
+    "@sveltejs/adapter-static": "^3.0.0",
+    "@sveltejs/kit": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "svelte": "^4.2.0",
+    "svelte-check": "^4.3.3",
+    "typescript": "^5.9.3",
     "vite": "^5.4.0"
   },
   "dependencies": {
+    "fuse.js": "^7.1.0",
+    "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
     "leaflet": "^1.9.4",
+    "mark.js": "^8.11.1",
     "marked": "^15.0.0"
   }
 }
