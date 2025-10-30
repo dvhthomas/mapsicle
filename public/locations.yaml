@@ -1,0 +1,132 @@
+locations:
+  - name: Rocky Mountain National Park
+    place: Rocky Mountain National Park, Colorado, USA
+    tags:
+      - nature
+      - hiking
+      - mountains
+    description: |
+      # Amazing Mountain Views
+
+      Rocky Mountain National Park offers **stunning alpine scenery** and abundant wildlife.
+
+      - Trail Ridge Road reaches over 12,000 feet
+      - Home to elk, bighorn sheep, and black bears
+      - Over 350 miles of hiking trails
+
+      *Best visited in summer and early fall.*
+    coords:
+      lat: 40.355392
+      lon: -105.717696
+  - name: Oxford University
+    place: University of Oxford, Oxford, UK
+    tags:
+      - history
+      - education
+      - architecture
+    description: |
+      # Historic University Town
+
+      Oxford is home to the **oldest university** in the English-speaking world.
+
+      Notable features:
+      - Beautiful college buildings dating back to the 13th century
+      - The Bodleian Library
+      - Punting on the River Cherwell
+
+      A must-visit for history lovers!
+    coords:
+      lat: 51.752546
+      lon: -1.21433
+  - name: Denver Art Museum
+    place: Denver, Colorado, USA
+    tags:
+      - art
+      - culture
+      - museums
+    description: |
+      # World-Class Art Collection
+
+      The Denver Art Museum features an impressive collection of **Native American art**
+      and contemporary works.
+
+      Highlights include:
+      - Stunning architecture by Daniel Libeskind
+      - Over 70,000 works of art
+      - Free admission for youth 18 and under
+    coords:
+      lat: 39.739236
+      lon: -104.984862
+  - name: Cotswolds Villages
+    place: Burford, Oxfordshire, UK
+    tags:
+      - nature
+      - villages
+      - walking
+    description: |
+      # Picturesque English Countryside
+
+      The Cotswolds are known for their rolling hills and honey-colored stone villages.
+
+      Popular activities:
+      - Walking the Cotswold Way
+      - Visiting charming villages like Burford and Bibury
+      - Traditional English pubs and tea rooms
+
+      *Perfect for a relaxing countryside retreat.*
+    coords:
+      lat: 51.808193
+      lon: -1.635818
+  - name: Garden of the Gods
+    place: Garden of the Gods, Colorado Springs, Colorado, USA
+    tags:
+      - nature
+      - hiking
+      - photography
+    description: |
+      # Dramatic Red Rock Formations
+
+      Garden of the Gods is a **free public park** featuring towering red sandstone formations.
+
+      - Excellent rock climbing opportunities
+      - Paved and unpaved trails for all skill levels
+      - Stunning views of Pikes Peak
+
+      Great for photography at sunrise and sunset!
+    coords:
+      lat: 38.874377
+      lon: -104.882409
+  - name: Blenheim Palace
+    place: Blenheim Palace, Woodstock, Oxfordshire, UK
+    tags:
+      - history
+      - architecture
+      - gardens
+    description: |
+      # UNESCO World Heritage Site
+
+      Blenheim Palace is the **birthplace of Winston Churchill** and a masterpiece of
+      Baroque architecture.
+
+      Features:
+      - Magnificent State Rooms
+      - 2,000 acres of landscaped parkland
+      - Beautiful formal gardens
+
+      One of England's finest stately homes.
+    coords:
+      lat: 51.845824
+      lon: -1.350715
+  - name: 1600 Pennsylvania Avenue
+    place: 1600 Pennsylvania Avenue NW, Washington, DC, USA
+    tags:
+      - history
+      - government
+      - architecture
+    description: |
+      # The White House
+
+      Official residence and workplace of the President of the United States.
+    coords:
+      lat: 38.897639
+      lon: -77.036553
