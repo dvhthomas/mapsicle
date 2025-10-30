@@ -18,15 +18,28 @@ Your site is configured to automatically deploy to GitHub Pages when you push to
 
 2. **Configure base path** (if deploying to a subdirectory):
 
-   If your site will be at `username.github.io/travels`, update `vite.config.js`:
+   If your site will be at `username.github.io/repo-name` (subdirectory), update `svelte.config.js`:
    ```javascript
-   export default defineConfig({
-     plugins: [sveltekit()],
-     base: '/travels/'  // Add this line
-   });
+   kit: {
+     adapter: adapter({...}),
+     paths: {
+       base: process.env.NODE_ENV === 'production' ? '/repo-name' : ''
+     }
+   }
    ```
 
-   If deploying to root domain (`username.github.io`), no base path needed.
+   **Example:** For this repo (`mapsicle`), it's configured as:
+   ```javascript
+   paths: {
+     base: process.env.NODE_ENV === 'production' ? '/mapsicle' : ''
+   }
+   ```
+
+   **Important:**
+   - Use `/repo-name` (no trailing slash)
+   - The base path is only applied in production builds
+   - Development (localhost) uses empty base path
+   - If deploying to root domain (`username.github.io`), use empty string: `base: ''`
 
 3. **Add MapTiler API key** (optional):
    - Go to: `https://github.com/YOUR-USERNAME/YOUR-REPO/settings/secrets/actions`

@@ -61,7 +61,12 @@ Refresh your browser - your location appears on the map!
 
 ### 4. Deploy to GitHub Pages
 
-Edit `vite.config.js` - set `base: '/my-travel-map/'` (your repo name).
+Edit `svelte.config.js` - update the base path with your repo name:
+```javascript
+paths: {
+  base: process.env.NODE_ENV === 'production' ? '/my-travel-map' : ''
+}
+```
 
 Create `.github/workflows/deploy.yml`:
 
@@ -359,10 +364,13 @@ Without a key, it uses OpenStreetMap tiles (still looks good!).
 
 ### Step 1: Configure Base Path
 
-Edit `vite.config.js`:
+Edit `svelte.config.js` in the `kit.paths` section:
 ```javascript
-base: '/my-travel-map/',  // Your repo name
+paths: {
+  base: process.env.NODE_ENV === 'production' ? '/my-travel-map' : ''
+}
 ```
+Replace `/my-travel-map` with your repository name.
 
 ### Step 2: Add GitHub Actions
 
