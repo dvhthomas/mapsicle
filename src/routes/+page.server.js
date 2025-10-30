@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { base } from '$app/paths';
 
 // Enable static site generation for this page
 export const prerender = true;
@@ -20,7 +21,7 @@ function isRemoteUrl(str) {
 /**
  * Convert image path to absolute path
  * If it's a URL, return as-is
- * If it's local, prepend /locations/{relativePath}/
+ * If it's local, prepend base path + /locations/{relativePath}/
  * @param {string} imagePath - Image filename or URL
  * @param {string} relativePath - Location's relative path
  * @returns {string} Absolute image path
@@ -28,7 +29,7 @@ function isRemoteUrl(str) {
 function resolveImagePath(imagePath, relativePath) {
 	if (!imagePath) return null;
 	if (isRemoteUrl(imagePath)) return imagePath;
-	return `/locations/${relativePath}/${imagePath}`;
+	return `${base}/locations/${relativePath}/${imagePath}`;
 }
 
 /**
