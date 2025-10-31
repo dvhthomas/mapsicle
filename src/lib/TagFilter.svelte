@@ -76,23 +76,33 @@
   }
 
   .tag-filter {
-    padding: 0.375rem 0.75rem;
+    padding: 0.25rem 0.5rem;
     background: var(--color-surface);
     border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.625rem;
     color: var(--color-text-primary);
     font-weight: var(--font-weight-normal);
-    box-shadow: var(--shadow-sm);
     text-transform: uppercase;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    margin: 0;
+    line-height: 1;
   }
 
   .tag-filter:hover {
-    background: var(--color-complement);
+    background: var(--color-accent);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
     transform: translate(-1px, -1px);
     box-shadow: var(--shadow-md);
+  }
+
+  .tag-filter:active {
+    transform: translate(0, 0);
+    box-shadow: var(--shadow-sm);
   }
 
   .tag-filter.active {
@@ -103,22 +113,15 @@
     transform: translate(-2px, -2px);
   }
 
-  /* Responsive: Hide tags on mobile */
-  @media (max-width: 1024px) {
-    .tag-filters {
-      display: none;
-    }
-  }
-
-  /* Tablet: More compact styling */
+  /* Mobile/Tablet: More compact styling */
   @media (max-width: 1024px) {
     .tag-filters {
       padding: var(--spacing-sm) var(--spacing-md);
     }
 
     .tag-filter {
-      font-size: 0.75rem;
-      padding: 4px 8px;
+      font-size: 0.7rem;
+      padding: 2px 6px;
     }
   }
 </style>

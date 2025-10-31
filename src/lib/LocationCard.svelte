@@ -22,6 +22,7 @@
    */
 
   import { createEventDispatcher, onDestroy } from 'svelte';
+  import MiniTagList from './MiniTagList.svelte';
 
   export let location;
   export let selected = false;
@@ -62,14 +63,10 @@
   }
 
   /**
-   * Handle tag click - triggers search for that tag
-   * Stops event propagation to prevent card selection
-   * @param {MouseEvent} event - Click event
-   * @param {string} tag - Tag that was clicked
+   * Forward tag clicks from MiniTagList to parent
    */
-  function handleTagClick(event, tag) {
-    event.stopPropagation();
-    dispatch('tagclick', tag);
+  function handleTagClick(event) {
+    dispatch('tagclick', event.detail);
   }
 </script>
 
@@ -84,19 +81,7 @@
 >
   <h4>{location.name}</h4>
   <div class="location-place">{location.place}</div>
-  {#if location.tags && location.tags.length > 0}
-    <div class="tags">
-      {#each location.tags as tag}
-        <button
-          class="tag tag-button"
-          on:click={(e) => handleTagClick(e, tag)}
-          title="Search for {tag}"
-        >
-          {tag}
-        </button>
-      {/each}
-    </div>
-  {/if}
+  <MiniTagList tags={location.tags} on:tagclick={handleTagClick} />
 </div>
 
 <style>
@@ -140,43 +125,6 @@
     margin-bottom: var(--spacing-sm);
   }
 
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-xs);
-  }
-
-  .tag {
-    padding: 0.25rem 0.5rem;
-    background: var(--color-surface);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 0.625rem;
-    color: var(--color-text-primary);
-    font-weight: var(--font-weight-normal);
-    text-transform: uppercase;
-    box-shadow: var(--shadow-sm);
-  }
-
-  .tag-button {
-    cursor: pointer;
-    transition: none;
-    font-family: inherit;
-  }
-
-  .tag-button:hover {
-    background: var(--color-accent);
-    border-color: var(--color-border);
-    color: var(--color-text-primary);
-    transform: translate(-1px, -1px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .tag-button:active {
-    transform: translate(0, 0);
-    box-shadow: var(--shadow-sm);
-  }
-
   /* Responsive: Compact location cards on mobile/tablet */
   @media (max-width: 1024px) {
     .location-item {
@@ -186,15 +134,6 @@
 
     .location-item h4 {
       font-size: 0.95rem;
-    }
-
-    .tags {
-      gap: var(--spacing-xs);
-    }
-
-    .tag {
-      font-size: 0.7rem;
-      padding: 2px 6px;
     }
   }
 </style>

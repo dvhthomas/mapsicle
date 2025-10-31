@@ -73,42 +73,42 @@
 
 <style>
   .search-section {
+    margin: 0;
     padding: 0;
     background: transparent;
     border: none;
-    box-shadow: none;
   }
 
   .search-input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
+    margin: 0;
+    padding: 0;
   }
 
   .search-input {
     width: 100%;
-    padding: var(--spacing-md) var(--spacing-lg);
-    padding-right: 4rem;
     font-size: 1.125rem;
     font-weight: var(--font-weight-normal);
     border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-full);
     background: var(--color-surface);
     color: var(--color-text-primary);
-    transition: box-shadow 0.2s ease;
     font-family: var(--font-family);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    margin: 0;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    padding-right: 3.5rem;
   }
 
   .search-input:focus {
     outline: none;
-    border-color: var(--color-border);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .search-input::placeholder {
     color: var(--color-text-muted);
-    font-weight: var(--font-weight-normal);
   }
 
   .clear-search {
@@ -127,23 +127,26 @@
     font-size: 1.25rem;
     font-weight: var(--font-weight-bold);
     line-height: 1;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
+    margin: 0;
     padding: 0;
   }
 
   .clear-search:hover {
     background: var(--color-primary);
-    color: var(--color-text-primary);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     transform: translateY(-1px);
   }
 
-  /* Responsive: Compact search bar on mobile/tablet */
+  /* Mobile: Smaller input */
   @media (max-width: 1024px) {
     .search-input {
-      padding: var(--spacing-sm);
+      padding: var(--spacing-sm) var(--spacing-md);
+      padding-right: 3rem;
       font-size: 0.9rem;
+    }
+
+    .clear-search {
+      right: var(--spacing-sm);
     }
   }
 </style>

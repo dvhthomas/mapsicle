@@ -2,59 +2,84 @@
   /**
    * Header Component
    *
-   * Displays app title and subtitle
-   * - On desktop/tablet: Hidden (title shown in sidebar)
-   * - On mobile: Minimal persistent header above search bar
+   * Universal header for all device sizes
+   * - Displays app title and subtitle
+   * - Clicking header resets app to HOME state (like VIEW ALL button)
+   * - Desktop: Full-size header in sidebar
+   * - Mobile: Compact horizontal header in sidebar
    */
   import { config } from '$lib/config';
+  import { actions } from '$lib/stores/appState';
+
+  function handleReset() {
+    actions.reset();
+  }
 </script>
 
-<div class="mobile-header">
+<button class="header" on:click={handleReset}>
   <h1>{config.appTitle}</h1>
   <p>{config.appSubtitle}</p>
-</div>
+</button>
 
 <style>
-  .mobile-header {
-    /* Hidden on desktop and tablet - title shown in sidebar */
-    display: none;
+  .header {
+    display: block;
+    background: var(--color-primary);
+    border: none;
+    border-bottom: var(--border-width-thick) solid var(--color-border);
+    width: 100%;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    text-align: center;
+    margin: 0;
+    padding: var(--spacing-lg) var(--spacing-md);
+    line-height: 1;
+    font-family: inherit;
   }
 
-  /* Mobile only: Show compact horizontal header */
+  .header:hover {
+    opacity: 0.85;
+  }
+
+  .header:active {
+    opacity: 0.7;
+  }
+
+  .header h1,
+  .header p {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    vertical-align: baseline;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+  }
+
+  .header p {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-normal);
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    margin-left: var(--spacing-sm);
+  }
+
+  /* Mobile: Smaller text and padding */
   @media (max-width: 1024px) {
-    .mobile-header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-xs);
-      background: var(--color-primary);
-      padding: var(--spacing-sm) var(--spacing-md);
-      margin: 0;
-      border: none;
-      border-bottom: var(--border-width-thick) solid var(--color-border);
-      width: 100%;
+    .header {
+      padding: var(--spacing-md) var(--spacing-md);
     }
 
-    .mobile-header h1 {
+    .header h1 {
       font-size: 0.9rem;
-      font-weight: var(--font-weight-bold);
-      margin: 0;
-      color: var(--color-text-primary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
-    .mobile-header p {
+    .header p {
       font-size: 0.65rem;
-      margin: 0;
-      color: var(--color-text-primary);
-      text-transform: uppercase;
-      opacity: 0.85;
-    }
-
-    .mobile-header p::before {
-      content: "·";
-      margin-right: var(--spacing-xs);
     }
   }
 </style>

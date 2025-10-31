@@ -22,6 +22,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import ImageViewer from './ImageViewer.svelte';
+  import MiniTagList from './MiniTagList.svelte';
 
   export let location = null;
 
@@ -74,11 +75,10 @@
   }
 
   /**
-   * Handle tag click - triggers search for that tag
-   * @param {string} tag - Tag that was clicked
+   * Forward tag clicks from MiniTagList to parent
    */
-  function handleTagClick(tag) {
-    dispatch('tagclick', tag);
+  function handleTagClick(event) {
+    dispatch('tagclick', event.detail);
   }
 
   /**
@@ -141,9 +141,6 @@
         <!-- Desktop: Inline carousel with navigation -->
         <div class="detail-hero" role="button" tabindex="0" on:click={openImageViewer} on:keypress={(e) => e.key === 'Enter' && openImageViewer()}>
           <img src={currentDetailImage} alt={location.name} />
-          <div class="hero-overlay">
-            <span class="hero-zoom-icon">🔍</span>
-          </div>
 
           <!-- Image navigation controls (only show if multiple images) -->
           {#if allLocationImages.length > 1}
@@ -181,15 +178,7 @@
 
     {#if location.tags && location.tags.length > 0}
       <div class="detail-tags">
-        {#each location.tags as tag}
-          <button
-            class="tag tag-button"
-            on:click={() => handleTagClick(tag)}
-            title="Search for {tag}"
-          >
-            {tag}
-          </button>
-        {/each}
+        <MiniTagList tags={location.tags} on:tagclick={handleTagClick} />
       </div>
     {/if}
   </div>
@@ -294,29 +283,6 @@
     transform: scale(1.05);
   }
 
-  .hero-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .detail-hero:hover .hero-overlay {
-    opacity: 1;
-  }
-
-  .hero-zoom-icon {
-    font-size: 3rem;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  }
-
   .detail-hero-nav {
     position: absolute;
     bottom: var(--spacing-md);
@@ -388,6 +354,7 @@
     min-height: 0;
     overflow-y: auto;
     line-height: 1.6;
+    background: white;
   }
 
   /* Styles for markdown-generated content */
@@ -459,23 +426,8 @@
   .detail-tags {
     padding: var(--spacing-sm) var(--spacing-md);
     border-top: var(--border-width-thick) solid var(--color-border);
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-xs);
     background: var(--color-complement);
     flex-shrink: 0;
-  }
-
-  .detail-tags .tag {
-    padding: 0.25rem 0.5rem;
-    background: var(--color-surface);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 0.65rem;
-    color: var(--color-text-primary);
-    font-weight: var(--font-weight-normal);
-    text-transform: uppercase;
-    box-shadow: var(--shadow-sm);
   }
 
   .view-photos-button {
@@ -523,6 +475,7 @@
     .detail-header {
       padding: var(--spacing-xs) var(--spacing-sm);
       grid-row: 1;
+      border-bottom: none;
     }
 
     .detail-header h2 {
@@ -545,18 +498,18 @@
       height: 120px;
       border-radius: 0;
       grid-row: 2;
+      border-top: var(--border-width) solid var(--color-border);
+      border-bottom: var(--border-width) solid var(--color-border);
     }
 
     .detail-hero-nav {
       display: none !important;
     }
 
-    .hero-overlay {
-      display: none;
-    }
-
     .view-photos-button {
       border-radius: 0;
+      border-left: none;
+      border-right: none;
       margin-bottom: 0;
       padding: var(--spacing-sm) var(--spacing-md);
       font-size: 0.875rem;
@@ -573,11 +526,6 @@
     .detail-tags {
       grid-row: 4;
       padding: var(--spacing-xs) var(--spacing-sm);
-    }
-
-    .detail-tags .tag {
-      font-size: 0.6rem;
-      padding: 0.2rem 0.4rem;
     }
   }
 </style>

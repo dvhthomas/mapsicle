@@ -17,12 +17,12 @@
 
   // UI Components
   import Header from '$lib/Header.svelte';
+  import Tools from '$lib/Tools.svelte';
   import SearchBar from '$lib/SearchBar.svelte';
-  import TagFilter from '$lib/TagFilter.svelte';
-  import LocationList from '$lib/LocationList.svelte';
   import DiscoverList from '$lib/DiscoverList.svelte';
   import Map from '$lib/Map.svelte';
   import DetailPanel from '$lib/DetailPanel.svelte';
+  import VerticalCollapsible from '$lib/VerticalCollapsible.svelte';
 
   // Centralized state management (see STATE_MACHINE.md)
   import {
@@ -45,6 +45,7 @@
 
   let showDiscoverList = false;
   let searchBarComponent;
+  let isSidebarOpen = false;
 
   /**
    * Initialize application state on mount
@@ -96,9 +97,16 @@
     actions.filterByTags(event.detail);
   }
 
+  /** Handle Tools component events */
+  function handleToolsTagFilter(event) {
+    actions.filterByTags(event.detail);
+  }
+
   /** Handle location selection (opens detail panel) */
   function handleLocationSelect(event) {
     actions.selectLocation(event.detail);
+    // Close mobile sidebar when location is selected
+    isSidebarOpen = false;
   }
 
   /** Handle location hover (preview on map) */
@@ -141,33 +149,39 @@
 </svelte:head>
 
 <main class:searching={$searchQuery.trim() || $selectedTags.size > 0}>
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h1>{config.appTitle}</h1>
-      <p>{config.appSubtitle}</p>
+  <Header />
+
+  <div class="content-grid">
+    <div class="sidebar">
+      <Tools
+        allTags={$allTags}
+        selectedTags={$selectedTags}
+        visibleLocations={$visibleLocations}
+        selectedLocation={$selectedLocation}
+        searchQuery={$searchQuery}
+        on:discover={handleDiscoverClick}
+        on:tagfilter={handleToolsTagFilter}
+        on:select={handleLocationSelect}
+        on:hover={handleLocationHover}
+        on:tagclick={handleTagClick}
+      />
     </div>
 
-    <div class="discover-section">
-      <button class="discover-btn" on:click={handleDiscoverClick}>
-        ✨ Discover Recent Updates
-      </button>
-    </div>
-
-    <TagFilter
-      tags={$allTags}
-      selectedTags={$selectedTags}
-      on:change={handleTagFilterChange}
-    />
-
-    <LocationList
-      locations={$visibleLocations}
-      selectedLocation={$selectedLocation}
-      searchQuery={$searchQuery}
-      on:select={handleLocationSelect}
-      on:hover={handleLocationHover}
-      on:tagclick={handleTagClick}
-    />
-  </div>
+    <!-- Mobile: Sidebar as slide-in panel -->
+    <VerticalCollapsible bind:isOpen={isSidebarOpen}>
+      <Tools
+        allTags={$allTags}
+        selectedTags={$selectedTags}
+        visibleLocations={$visibleLocations}
+        selectedLocation={$selectedLocation}
+        searchQuery={$searchQuery}
+        on:discover={handleDiscoverClick}
+        on:tagfilter={handleToolsTagFilter}
+        on:select={handleLocationSelect}
+        on:hover={handleLocationHover}
+        on:tagclick={handleTagClick}
+      />
+    </VerticalCollapsible>
 
   <!-- Discover List Modal -->
   <DiscoverList
@@ -180,7 +194,6 @@
   <div class="map-and-detail">
     <div class="map-wrapper">
       <div class="map-search-overlay">
-        <Header />
         <SearchBar
           bind:this={searchBarComponent}
           bind:searchQuery={$searchQuery}
@@ -203,5 +216,6 @@
         on:tagclick={handleTagClick}
       />
     {/if}
+  </div>
   </div>
 </main>

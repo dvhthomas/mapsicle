@@ -69,6 +69,46 @@
   }
 
   /**
+   * Create custom camera icon for map markers
+   * Fun, whimsical design with black outlines and pink fill
+   */
+  function createCameraIcon() {
+    const iconHTML = `
+      <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <!-- Drop shadow for depth -->
+        <ellipse cx="20" cy="35" rx="12" ry="3" fill="rgba(0,0,0,0.2)" />
+
+        <!-- Camera body -->
+        <rect x="8" y="14" width="24" height="16" rx="2" fill="#FF6B9D" stroke="#2A2A2A" stroke-width="2"/>
+
+        <!-- Camera top viewfinder -->
+        <path d="M 14 14 L 16 10 L 24 10 L 26 14 Z" fill="#FF6B9D" stroke="#2A2A2A" stroke-width="2"/>
+
+        <!-- Lens -->
+        <circle cx="20" cy="22" r="6" fill="#FFFFFF" stroke="#2A2A2A" stroke-width="2"/>
+        <circle cx="20" cy="22" r="4" fill="#6BA3FF" stroke="#2A2A2A" stroke-width="1.5"/>
+
+        <!-- Shutter button -->
+        <circle cx="29" cy="17" r="1.5" fill="#FFD93D" stroke="#2A2A2A" stroke-width="1"/>
+
+        <!-- Flash -->
+        <rect x="10" y="16" width="3" height="2" rx="0.5" fill="#FFD93D" stroke="#2A2A2A" stroke-width="1"/>
+
+        <!-- Sparkle for fun -->
+        <path d="M 30 8 L 31 10 L 33 11 L 31 12 L 30 14 L 29 12 L 27 11 L 29 10 Z" fill="#FFD93D" stroke="none"/>
+      </svg>
+    `;
+
+    return L.divIcon({
+      html: iconHTML,
+      className: 'custom-camera-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 35], // Anchor at bottom center
+      popupAnchor: [0, -35] // Popup appears above the icon
+    });
+  }
+
+  /**
    * Update map markers based on current locations prop
    * - Removes all existing markers
    * - Creates new markers for each location
@@ -85,7 +125,9 @@
     locations.forEach(location => {
       if (!location.coords) return;
 
-      const marker = L.marker([location.coords.lat, location.coords.lon])
+      const marker = L.marker([location.coords.lat, location.coords.lon], {
+        icon: createCameraIcon()
+      })
         .addTo(map)
         .bindPopup(createMarkerPopupHTML(location), {
           maxWidth: 300,
@@ -362,21 +404,17 @@
   <!-- Leaflet map container -->
   <div bind:this={mapContainer} style="width: 100%; height: 100%;"></div>
 
-  <!-- Map control buttons (bottom-right corner) -->
+  <!-- Map action buttons -->
   <div class="map-controls">
-    <button
-      class="map-control-btn"
-      on:click={handleDiscoverButtonClick}
-      title="Zoom to most recent location"
-    >
+    <button class="map-control-btn discover-btn" on:click={handleDiscoverButtonClick}>
       ✨ Discover
     </button>
-    <button
-      class="map-control-btn"
-      on:click={handleViewAllButtonClick}
-      title="Zoom to show all locations"
-    >
-      🌍 View All
+    <button class="map-control-btn view-all-btn" on:click={handleViewAllButtonClick}>
+      <svg width="14" height="14" viewBox="0 0 16 16" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+        <path d="M 8 2 A 6 6 0 1 1 2.5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M 2.5 2 L 2.5 5.5 L 6 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Reset
     </button>
   </div>
 
@@ -400,27 +438,44 @@
     bottom: 0;
   }
 
+  /* Custom camera marker styling */
+  :global(.custom-camera-marker) {
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer;
+  }
+
+  :global(.custom-camera-marker svg) {
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
+    transition: transform 0.2s ease;
+  }
+
+  :global(.custom-camera-marker:hover svg) {
+    transform: scale(1.1);
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.8));
+  }
+
+  /* Floating map control buttons */
   .map-controls {
     position: absolute;
-    bottom: var(--spacing-md);
-    right: var(--spacing-md);
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
     display: flex;
+    flex-direction: column;
     gap: var(--spacing-sm);
     z-index: 1000;
-    pointer-events: none;
   }
 
   .map-control-btn {
-    pointer-events: all;
     padding: var(--spacing-sm) var(--spacing-md);
     background: var(--color-surface);
     border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     color: var(--color-text-primary);
     font-size: 0.875rem;
     font-weight: var(--font-weight-bold);
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     transition: all 0.2s ease;
     white-space: nowrap;
     font-family: var(--font-family);
@@ -430,13 +485,13 @@
 
   .map-control-btn:hover {
     background: var(--color-primary);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+    transform: translate(-2px, -2px);
   }
 
   .map-control-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    transform: translate(-1px, -1px);
+    box-shadow: var(--shadow-md);
   }
 
   /* Leaflet zoom controls - Neobrutalism style */
