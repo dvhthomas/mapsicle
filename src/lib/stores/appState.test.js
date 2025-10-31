@@ -121,15 +121,30 @@ describe('State Machine - reset() Action', () => {
     expect(get(discoverMode)).toBe(false);
   });
 
-  it('clears URL parameters', () => {
+  it('clears URL parameters including tags', () => {
+    // CRITICAL: Override window.location AFTER beforeEach runs
+    // Set up URL with tags parameter to simulate user having filtered by tags
+    window.location = new URL('http://localhost:3000/?s=test&tags=city,landmark&loc=tokyo&discover');
+
+    // Capture the URL passed to pushState with a custom spy
+    let capturedUrl = null;
+    window.history.pushState = vi.fn((state, title, url) => {
+      // Capture by converting to string immediately
+      capturedUrl = url.toString();
+    });
+
     actions.reset();
 
     expect(window.history.pushState).toHaveBeenCalled();
-    const call = window.history.pushState.mock.calls[0];
-    const url = call[2];
-    expect(url).not.toContain('s=');
-    expect(url).not.toContain('loc=');
-    expect(url).not.toContain('discover');
+
+    // Parse the captured URL
+    const urlObj = new URL(capturedUrl);
+
+    // Verify ALL parameters are removed
+    expect(urlObj.searchParams.has('s')).toBe(false);
+    expect(urlObj.searchParams.has('loc')).toBe(false);
+    expect(urlObj.searchParams.has('discover')).toBe(false);
+    expect(urlObj.searchParams.has('tags')).toBe(false);
   });
 
   it('triggers map reset event', () => {
@@ -218,7 +233,7 @@ describe('State Machine - filterByTags() Action', () => {
     expect(get(discoverMode)).toBe(false);
   });
 
-  it('clears URL parameters when filtering', () => {
+  it('clears other URL parameters when filtering', () => {
     actions.filterByTags(new Set(['city']));
 
     expect(goto).toHaveBeenCalled();
@@ -226,6 +241,22 @@ describe('State Machine - filterByTags() Action', () => {
     expect(url.searchParams.has('s')).toBe(false);
     expect(url.searchParams.has('loc')).toBe(false);
     expect(url.searchParams.has('discover')).toBe(false);
+  });
+
+  it('adds tags to URL as comma-separated list', () => {
+    actions.filterByTags(new Set(['city', 'landmark']));
+
+    expect(goto).toHaveBeenCalled();
+    const url = goto.mock.calls[0][0];
+    expect(url.searchParams.get('tags')).toBe('city,landmark');
+  });
+
+  it('removes tags from URL when no tags selected', () => {
+    actions.filterByTags(new Set());
+
+    expect(goto).toHaveBeenCalled();
+    const url = goto.mock.calls[0][0];
+    expect(url.searchParams.has('tags')).toBe(false);
   });
 });
 
@@ -588,5 +619,34 @@ describe('State Machine - initializeFromURL()', () => {
 
     expect(get(selectedLocation).slug).toBe('oxford-university');
     vi.useRealTimers();
+  });
+
+  it('restores tag filters from URL', () => {
+    const params = new URLSearchParams('tags=city,landmark');
+    actions.initializeFromURL(params);
+
+    const tags = get(selectedTags);
+    expect(tags.has('city')).toBe(true);
+    expect(tags.has('landmark')).toBe(true);
+    expect(tags.size).toBe(2);
+  });
+
+  it('handles single tag in URL', () => {
+    const params = new URLSearchParams('tags=hiking');
+    actions.initializeFromURL(params);
+
+    const tags = get(selectedTags);
+    expect(tags.has('hiking')).toBe(true);
+    expect(tags.size).toBe(1);
+  });
+
+  it('ignores empty tag values in URL', () => {
+    const params = new URLSearchParams('tags=city,,landmark');
+    actions.initializeFromURL(params);
+
+    const tags = get(selectedTags);
+    expect(tags.has('city')).toBe(true);
+    expect(tags.has('landmark')).toBe(true);
+    expect(tags.size).toBe(2);
   });
 });

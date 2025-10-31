@@ -211,6 +211,7 @@ export const actions = {
     url.searchParams.delete('s');
     url.searchParams.delete('loc');
     url.searchParams.delete('discover');
+    url.searchParams.delete('tags');
     window.history.pushState({}, '', url);
 
     // Trigger map to fit all locations
@@ -286,7 +287,7 @@ export const actions = {
    * - CLEARS selected location
    * - Exits discover mode
    *
-   * URL: / (tags not stored in URL currently)
+   * URL: /?tags=tag1,tag2 (or / if no tags)
    * LIST BEHAVIOR: Shows ALL matching results regardless of map viewport
    */
   filterByTags(tags) {
@@ -301,6 +302,14 @@ export const actions = {
     url.searchParams.delete('discover');
     url.searchParams.delete('s');
     url.searchParams.delete('loc');
+
+    // Add tags to URL as comma-separated list
+    if (tags.size > 0) {
+      url.searchParams.set('tags', Array.from(tags).sort().join(','));
+    } else {
+      url.searchParams.delete('tags');
+    }
+
     goto(url, { replaceState: true, noScroll: true, keepFocus: true });
   },
 
@@ -428,6 +437,7 @@ export const actions = {
    *
    * Handles deep linking by parsing URL parameters:
    * - /?s=query → Restores search
+   * - /?tags=tag1,tag2 → Restores tag filters
    * - /?loc=slug → Selects and zooms to location
    * - /?s=query&loc=slug → Restores search AND selects location
    * - /?discover → Enters discover mode
@@ -436,6 +446,15 @@ export const actions = {
     const query = params.get('s');
     if (query) {
       searchQuery.set(query);
+    }
+
+    // Check for tag filters
+    const tagsParam = params.get('tags');
+    if (tagsParam) {
+      const tags = new Set(tagsParam.split(',').filter(t => t.trim()));
+      if (tags.size > 0) {
+        selectedTags.set(tags);
+      }
     }
 
     // Check for location deep link
