@@ -161,6 +161,7 @@
    * Handle changes to selectedLocation prop
    * Centers map on location and opens its popup
    * If map is at minimum zoom (world view), zooms in a few levels
+   * Accounts for search bar height to prevent marker from being hidden
    */
   function focusOnSelectedLocation() {
     if (!map || !selectedLocation || !selectedLocation.coords) return;
@@ -183,6 +184,10 @@
     // Works even if marker doesn't exist yet (timing issue with marker refresh)
     setTimeout(() => {
       map.setView([selectedLocation.coords.lat, selectedLocation.coords.lon], targetZoom);
+
+      // Pan down to account for search bar height (prevents marker from being hidden)
+      // Search bar + margins is approximately 80-100px
+      map.panBy([0, -70], { animate: true, duration: 0.3 });
 
       // Try to open popup if marker exists
       const marker = markers.find(m =>
